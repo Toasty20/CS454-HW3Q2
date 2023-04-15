@@ -1,0 +1,98 @@
+import java.util.LinkedList;
+import java.util.concurrent.locks.*;
+import java.util.Queue;
+
+public class SavingsAccount {
+    double Balance;
+    Lock Depositlock;
+    Lock WithdrawLock;
+    Lock lock;
+    Condition condition;
+    Queue<Integer> Preffered;
+    Queue<Integer> Ordinary;
+
+    public SavingsAccount(){
+        Balance = 0;
+        Depositlock = new ReentrantLock();
+        WithdrawLock = new ReentrantLock();
+        lock = new ReentrantLock();
+        condition = Depositlock.newCondition();
+        Preffered = new LinkedList<>();
+        Ordinary = new LinkedList<>();
+    }
+
+    public void deposit(double amount){
+        Depositlock.lock();
+        try{
+            Balance+= amount;
+            condition.signalAll();
+        }
+
+
+        finally {
+            Depositlock.unlock();
+        }
+
+
+
+
+    }
+
+
+    public void withdraw(boolean Priority, int amount) throws InterruptedException {
+        WithdrawLock.lock();
+
+
+        if(Priority){
+            try {
+                while (Balance < amount) {
+                    condition.await();
+                }
+                Balance-= amount;
+            }
+            finally{
+
+
+                WithdrawLock.unlock();
+            }
+        }
+        else {
+            try {
+                while (Balance <= amount) {
+                    condition.await();
+                }
+                Balance -= amount;
+            }
+
+
+            finally {
+                WithdrawLock.unlock();
+            }
+
+
+        }
+
+
+    }
+
+
+    void transfer(int k, boolean priority, SavingsAccount reserve) {
+        lock.lock();
+        try {
+            reserve.withdraw(priority,k);
+            deposit(k);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+
+
+}
+
+
+
+
+
